@@ -64,6 +64,7 @@ public:
  * @brief Abstract base class for channel data services.
  *
  * This class defines the interface for reading and processing data from the hardware channels.
+ * It maintains a table of up-to-date information for all subscribed channels.
  */
 class ChannelDataService {
 public:
@@ -105,12 +106,15 @@ public:
      */
     virtual float getCurrent(uint32_t channel) = 0;
 
-    // ... other get data functions 
-
     /**
-     * @brief Receives data from the M4 core through RPMsg.
+     * @brief Gets the voltage derivative (dv/dt) for a specific channel.
+     *
+     * @param channel The channel number.
+     * @return The dv/dt value.
      */
-    virtual void getM4Data() = 0; // Receives data from M4 through RPMsg
+    virtual float getDvDt(uint32_t channel) = 0;
+
+    // ... other get data functions
     
     /**
      * @brief Registers a callback function for a specific channel.
@@ -121,12 +125,13 @@ public:
     virtual void registerCallback(uint32_t channel, CallbackFunction callback) = 0;
     
     /**
-     * @brief Processes data received from the M4 core.
+     * @brief Receives and processes data from the M4 core.
+     * Updates the channel data table if the channel is subscribed.
      *
      * @param channel The channel number.
      * @param data The data received from the M4 core.
      */
-    virtual void processM4Data(uint32_t channel, const std::map<std::string, float>& data) = 0;
+    virtual void receiveM4Data(uint32_t channel, const std::map<std::string, float>& data) = 0;
 };
 
 /**
@@ -181,9 +186,17 @@ public:
  *
  * This class provides a simple implementation that logs data operations to the console
  * and returns dummy values rather than reading from actual hardware.
+ * It maintains a data table for all subscribed channels.
  */
 class DummyChannelDataService : public ChannelDataService {
 private:
+    // Channel data table to store up-to-date information for all channels
+    std::map<uint32_t, std::map<std::string, float>> channelDataTable;
+    
+    // Map to track subscribed channels
+    std::map<uint32_t, bool> subscribedChannels;
+    
+    // Callback map for registered callbacks
     std::map<uint32_t, CallbackFunction> callbackMap;
     
 public:
@@ -194,35 +207,59 @@ public:
      */
     void subscribeChannel(uint32_t channel) override {
         std::cout << "Subscribing to channel " << channel << std::endl;
+        subscribedChannels[channel] = true;
+        
+        // Initialize channel data table entry if it doesn't exist
+        if (channelDataTable.find(channel) == channelDataTable.end()) {
+            channelDataTable[channel] = {
+                {"voltage", 0.0f},
+                {"current", 0.0f},
+                {"dvdt", 0.0f}
+                // Other metrics can be added here
+            };
+        }
     }
     
     /**
      * @brief Gets the voltage value for a specific channel.
      *
      * @param channel The channel number.
-     * @return The voltage value (dummy value of 0.0).
+     * @return The voltage value from the data table.
      */
     float getVoltage(uint32_t channel) override {
         std::cout << "Getting voltage for channel " << channel << std::endl;
-        return 0.0f; // Dummy value
+        if (channelDataTable.count(channel) > 0) {
+            return channelDataTable[channel]["voltage"];
+        }
+        return 0.0f; // Default value
     }
     
     /**
      * @brief Gets the current value for a specific channel.
      *
      * @param channel The channel number.
-     * @return The current value (dummy value of 0.0).
+     * @return The current value from the data table.
      */
     float getCurrent(uint32_t channel) override {
         std::cout << "Getting current for channel " << channel << std::endl;
-        return 0.0f; // Dummy value
+        if (channelDataTable.count(channel) > 0) {
+            return channelDataTable[channel]["current"];
+        }
+        return 0.0f; // Default value
     }
     
     /**
-     * @brief Receives data from the M4 core through RPMsg.
+     * @brief Gets the voltage derivative (dv/dt) for a specific channel.
+     *
+     * @param channel The channel number.
+     * @return The dv/dt value from the data table.
      */
-    void getM4Data() override {
-        std::cout << "Getting M4 data" << std::endl;
+    float getDvDt(uint32_t channel) override {
+        std::cout << "Getting dv/dt for channel " << channel << std::endl;
+        if (channelDataTable.count(channel) > 0) {
+            return channelDataTable[channel]["dvdt"];
+        }
+        return 0.0f; // Default value
     }
     
     /**
@@ -237,16 +274,34 @@ public:
     }
     
     /**
-     * @brief Processes data received from the M4 core.
+     * @brief Receives and processes data from the M4 core.
+     * Updates the channel data table if the channel is subscribed.
      *
      * @param channel The channel number.
      * @param data The data received from the M4 core.
      */
-    void processM4Data(uint32_t channel, const std::map<std::string, float>& data) override {
-        std::cout << "Processing M4 data for channel " << channel << std::endl;
-        // Simulate data processing and callback trigger
-        if (callbackMap.count(channel) > 0) {
-            callbackMap[channel](channel, data);
+    void receiveM4Data(uint32_t channel, const std::map<std::string, float>& data) override {
+        std::cout << "Receiving M4 data for channel " << channel << std::endl;
+        
+        // Only update data table if the channel is subscribed
+        if (subscribedChannels.count(channel) > 0 && subscribedChannels[channel]) {
+            // Update the channel data table with new values
+            for (const auto& pair : data) {
+                channelDataTable[channel][pair.first] = pair.second;
+            }
+            
+            // Process additional metrics if needed
+            // For example, calculate dv/dt based on previous and current voltage readings
+            // This is just a placeholder - in a real implementation, calculation would be more sophisticated
+            if (data.count("voltage") > 0 && data.count("timestamp") > 0) {
+                // In a real implementation, you would use previous voltage and timestamp values
+                channelDataTable[channel]["dvdt"] = 0.001f; // Dummy calculation
+            }
+            
+            // Trigger callback if registered
+            if (callbackMap.count(channel) > 0) {
+                callbackMap[channel](channel, channelDataTable[channel]);
+            }
         }
     }
 };

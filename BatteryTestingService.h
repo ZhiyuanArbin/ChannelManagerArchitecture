@@ -83,8 +83,8 @@ private:
     // Threads
     std::thread controlThread1;
     std::thread controlThread2;
-    std::thread dataThread1;
-    std::thread dataThread2;
+    std::thread dataThread;      // For processing data tasks
+    std::thread m4DataThread;    // Dedicated thread for receiving M4 data
 
     // Mutexes and Condition Variables
     std::mutex controlQueueMutex;
@@ -95,6 +95,7 @@ private:
     // Thread Functions
     void controlThreadFunction();
     void dataThreadFunction();
+    void m4DataThreadFunction(); // New function for continuously receiving M4 data
 
     // Low-Level Services
     ChannelCtrlService* channelCtrlService;

@@ -6,13 +6,14 @@
 /**
  * @brief Constructor for the BatteryTestingService class.
  *
- * Initializes the control and data threads and the low-level services.
+ * Initializes the control threads, data thread, M4 data reception thread,
+ * and the low-level services.
  */
 BatteryTestingService::BatteryTestingService() :
     controlThread1(&BatteryTestingService::controlThreadFunction, this),
     controlThread2(&BatteryTestingService::controlThreadFunction, this),
-    dataThread1(&BatteryTestingService::dataThreadFunction, this),
-    dataThread2(&BatteryTestingService::dataThreadFunction, this) {
+    dataThread(&BatteryTestingService::dataThreadFunction, this),
+    m4DataThread(&BatteryTestingService::m4DataThreadFunction, this) {
     
     // Initialize channel control service
     channelCtrlService = new DummyChannelCtrlService();
@@ -30,8 +31,8 @@ BatteryTestingService::~BatteryTestingService() {
     // Clean up threads
     controlThread1.join();
     controlThread2.join();
-    dataThread1.join();
-    dataThread2.join();
+    dataThread.join();
+    m4DataThread.join();
 
     delete channelCtrlService;
     delete channelDataService;
@@ -124,7 +125,7 @@ void BatteryTestingService::controlThreadFunction() {
 }
 
 /**
- * @brief Thread function for the data threads.
+ * @brief Thread function for the data thread.
  *
  * Executes data tasks from the data task queue.
  */
@@ -139,6 +140,42 @@ void BatteryTestingService::dataThreadFunction() {
 
         task->execute();
         delete task; // Clean up task after execution
+    }
+}
+
+/**
+ * @brief Thread function for continuously receiving M4 data.
+ *
+ * This thread continuously receives data from the M4 core and updates
+ * the channel data table maintained by the ChannelDataService.
+ */
+void BatteryTestingService::m4DataThreadFunction() {
+    // Example data for demonstration purposes - in a real implementation,
+    // this would come from the hardware interface
+    std::map<std::string, float> sampleData;
+    
+    while (true) {
+        // Continuously poll for new data from M4 core
+        // In a real implementation, this might:
+        // 1. Wait for an interrupt or poll a hardware interface
+        // 2. Process raw data into meaningful values
+        // 3. Update the central data table
+        
+        for (uint32_t channel = 0; channel < 8; channel++) {  // Assuming 8 channels for example
+            // In a real implementation, we would get actual data from hardware
+            // Here we're just creating some dummy data for demonstration
+            sampleData["voltage"] = 3.7f + (channel * 0.1f);  // Example voltage values
+            sampleData["current"] = 1.0f - (channel * 0.05f); // Example current values
+            sampleData["temperature"] = 25.0f + channel;      // Example temperature values
+            sampleData["timestamp"] = static_cast<float>(time(nullptr));
+            
+            // Call receiveM4Data to update the channel data table
+            channelDataService->receiveM4Data(channel, sampleData);
+        }
+        
+        // Sleep to avoid excessive CPU usage
+        // In a real implementation, this might synchronize with hardware timing
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 
