@@ -160,7 +160,6 @@ void BatteryTestingService::m4DataThreadFunction() {
         // 1. Wait for an interrupt or poll a hardware interface
         // 2. Process raw data into meaningful values
         // 3. Update the central data table
-        
         for (uint32_t channel = 0; channel < 8; channel++) {  // Assuming 8 channels for example
             // In a real implementation, we would get actual data from hardware
             // Here we're just creating some dummy data for demonstration
@@ -172,7 +171,6 @@ void BatteryTestingService::m4DataThreadFunction() {
             // Call receiveM4Data to update the channel data table
             channelDataService->receiveM4Data(channel, sampleData);
         }
-        
         // Sleep to avoid excessive CPU usage
         // In a real implementation, this might synchronize with hardware timing
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

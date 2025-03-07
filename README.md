@@ -21,7 +21,7 @@ The architecture is structured around a separation of concerns, with distinct co
 
 *   **Low-Level Services:** These services provide the interface for interacting with the hardware.
     *   `ChannelCtrlService`: Responsible for sending control commands to the M4 core.
-    *   `ChannelDataService`: Responsible for reading and processing data received from the M4 core, including data processing functionality through the `processM4Data` method.
+    *   `ChannelDataService`: Responsible for maintaining a central data table with up-to-date information for all subscribed channels. It receives and processes data from the M4 core through the `receiveM4Data` method, updating the channel data table and triggering any registered callbacks.
 
 ### 2. Task Management
 
@@ -36,26 +36,33 @@ The application employs a task-based architecture, where each control type is de
     *   `controlTaskQueue`: Stores control tasks.
     *   `dataTaskQueue`: Stores data tasks.
 
-*   **Threads:** Dedicated threads are used to process tasks from the control and data queues. This allows for concurrent execution of tasks, improving overall system performance.
+*   **Threads:** Dedicated threads are used to process tasks from the control and data queues, along with a dedicated thread for receiving M4 data. This allows for concurrent execution of tasks, improving overall system performance.
     *   `controlThread1` and `controlThread2`: Process control tasks.
-    *   `dataThread1` and `dataThread2`: Process data tasks.
+    *   `dataThread`: Processes data tasks from the data queue.
+    *   `m4DataThread`: Dedicated thread continuously receiving and processing data from the M4 core, updating the channel data table in real-time.
 
 ### 3. Control and Data Planes
 
 The architecture is divided into distinct control and data planes to ensure separation of concerns and efficient resource utilization.
 
 *   **Control Plane:** Responsible for managing control-related tasks, such as setting hardware parameters and initiating testing sequences.
-*   **Data Plane:** Responsible for reading and processing data received from the hardware, such as voltage, current, and temperature measurements.
+*   **Data Plane:** Responsible for maintaining a central data table of channel information and processing data received from the hardware. The data plane:
+    * Manages a comprehensive table containing up-to-date measurements (voltage, current, dv/dt, etc.) for all subscribed channels.
+    * Continuously receives and processes data from the M4 core through a dedicated thread.
+    * Provides access to current channel data values through getter methods.
+    * Triggers callbacks when measurements meet defined conditions.
 
 ### 4. Asynchronous Communication and Callbacks
 
 The application utilizes a callback mechanism to handle asynchronous communication between the A7 and M4 cores. This allows the A7 cores to react to data changes in real-time.
 
-*   **Callback Mechanism:** A callback function is registered with the ChannelDataService for each channel, which is triggered when new data is received from the M4 core. The callback function can then perform specific actions based on the received data, such as switching to a different control mode.
+*   **Central Data Table:** The ChannelDataService maintains a comprehensive data table that stores up-to-date information for all subscribed channels, including voltage, current, dv/dt, and other metrics. This table is continuously updated with incoming data from the M4 core.
+
+*   **Callback Mechanism:** A callback function is registered with the ChannelDataService for each channel, which is triggered when new data is received and processed. The callback function can then perform specific actions based on the data in the channel table, such as switching to a different control mode.
 
 *   **Configurable Callbacks:** The callback functions are configurable at runtime, allowing for flexible adaptation to different testing scenarios.
 
-*   **Data Processing:** The ChannelDataService is responsible for processing incoming data from the M4 core through its `processM4Data` method, which invokes the appropriate callbacks based on the channel and data received.
+*   **Data Reception and Processing:** The ChannelDataService is responsible for receiving incoming data from the M4 core through its `receiveM4Data` method, which updates the channel data table and invokes the appropriate callbacks based on the channel and data received. This functionality is continuously executed by a dedicated thread in the BatteryTestingService.
 
 ### 5. Example: Constant Current Constant Voltage (CCCV)
 
@@ -82,7 +89,10 @@ The `main.cpp` file provides an example of how to use the `BatteryTestingService
 
 1.  Create an instance of the `BatteryTestingService` class.
 2.  Call the desired control type function, such as `runCCCV`.
-3.  Data from the M4 core is processed through the ChannelDataService's `processM4Data` function.
+3.  Data from the M4 core is automatically and continuously received and processed by the dedicated m4DataThread, which:
+    * Updates the central channel data table with the latest measurements
+    * Triggers registered callbacks when conditions are met
+    * Makes current data available through getter methods (getVoltage, getCurrent, getDvDt, etc.)
 
 ## Conclusion
 
@@ -95,6 +105,12 @@ Future improvements could include:
 
 1. **Memory Management**: Replace raw pointers with smart pointers (std::unique_ptr, std::shared_ptr) to prevent memory leaks and improve code safety.
 
-2. **Thread Safety**: Enhance thread safety around the callback mechanism, particularly for registering and invoking callbacks.
+2. **Thread Safety**: Enhance thread safety for the central data table access, particularly when multiple threads are reading and writing to the table. Consider implementing a reader-writer lock pattern or other concurrent data structure solutions.
 
-3. **Error Handling**: Implement a more robust error handling strategy, either using exceptions or error codes, to manage failures gracefully.
+3. **Error Handling**: Implement a more robust error handling strategy, either using exceptions or error codes, to manage failures gracefully, especially for data reception and processing errors.
+
+4. **Data Optimization**: Implement a more efficient data storage strategy for the channel data table, such as circular buffers for time-series data or a more sophisticated caching mechanism.
+
+5. **Advanced Analytics**: Extend the channel data table to include derived metrics and analytics like state-of-charge estimation, cell health indicators, or pattern recognition for battery behavior.
+
+6. **Configurable Data Reception**: Add configuration options for the M4 data reception thread, such as adjustable polling rates, filtering capabilities, or priority-based processing.
