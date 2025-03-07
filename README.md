@@ -97,20 +97,3 @@ The `main.cpp` file provides an example of how to use the `BatteryTestingService
 ## Conclusion
 
 The Battery Testing Service provides a flexible and efficient architecture for controlling and monitoring battery testing equipment. Its modular design, separation of concerns, and asynchronous communication capabilities make it well-suited for real-time embedded Linux environments.
-
-
-### Future Recommendations
-
-Future improvements could include:
-
-1. **Memory Management**: Replace raw pointers with smart pointers (std::unique_ptr, std::shared_ptr) to prevent memory leaks and improve code safety.
-
-2. **Thread Safety**: Enhance thread safety for the central data table access, particularly when multiple threads are reading and writing to the table. Consider implementing a reader-writer lock pattern or other concurrent data structure solutions.
-
-3. **Error Handling**: Implement a more robust error handling strategy, either using exceptions or error codes, to manage failures gracefully, especially for data reception and processing errors.
-
-4. **Data Optimization**: Implement a more efficient data storage strategy for the channel data table, such as circular buffers for time-series data or a more sophisticated caching mechanism.
-
-5. **Advanced Analytics**: Extend the channel data table to include derived metrics and analytics like state-of-charge estimation, cell health indicators, or pattern recognition for battery behavior.
-
-6. **Configurable Data Reception**: Add configuration options for the M4 data reception thread, such as adjustable polling rates, filtering capabilities, or priority-based processing.
