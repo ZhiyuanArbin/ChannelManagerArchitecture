@@ -1,9 +1,5 @@
 # Battery Testing Service Architecture
 
-## Overview
-
-The Battery Testing Service is designed for controlling and monitoring battery testing equipment. It is specifically tailored for an embedded Linux environment running on an STM32MP157 System on Chip (SoC), which features dual A7 cores and an M4 core. The application leverages the A7 cores for high-level control and data processing, while the M4 core handles low-level hardware interactions.
-
 ## Architecture
 
 The architecture is structured around a separation of concerns, with distinct control and data planes. This design facilitates efficient task management, asynchronous communication, and real-time data processing.
@@ -83,17 +79,3 @@ The `GenericControlTask` class provides a way to group multiple `ChannelCtrlServ
 *   **ChannelService.h:** Defines the interfaces for the `ChannelCtrlService` and `ChannelDataService` classes, including the data processing functionality in ChannelDataService.
 *   **BatteryTestingService.h:** Defines the `BatteryTestingService` class, which manages control and data tasks, with a public API focused solely on high-level control functions.
 
-## Usage
-
-The `main.cpp` file provides an example of how to use the `BatteryTestingService` class.
-
-1.  Create an instance of the `BatteryTestingService` class.
-2.  Call the desired control type function, such as `runCCCV`.
-3.  Data from the M4 core is automatically and continuously received and processed by the dedicated m4DataThread, which:
-    * Updates the central channel data table with the latest measurements
-    * Triggers registered callbacks when conditions are met
-    * Makes current data available through getter methods (getVoltage, getCurrent, getDvDt, etc.)
-
-## Conclusion
-
-The Battery Testing Service provides a flexible and efficient architecture for controlling and monitoring battery testing equipment. Its modular design, separation of concerns, and asynchronous communication capabilities make it well-suited for real-time embedded Linux environments.
