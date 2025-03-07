@@ -2,6 +2,9 @@
 #define CHANNELSERVICE_H
 
 #include <cstdint>
+#include <functional>
+#include <map>
+#include <string>
 
 // Forward declaration
 class Task;
@@ -62,6 +65,11 @@ public:
 class ChannelDataService {
 public:
     /**
+     * @brief Type definition for callback functions.
+     */
+    using CallbackFunction = std::function<void(uint32_t channel, const std::map<std::string, float>& data)>;
+
+    /**
      * @brief Constructor for the ChannelDataService class.
      */
     ChannelDataService() {}
@@ -98,6 +106,22 @@ public:
      * @brief Receives data from the M4 core through RPMsg.
      */
     virtual void getM4Data() = 0; // Receives data from M4 through RPMsg
+    
+    /**
+     * @brief Registers a callback function for a specific channel.
+     *
+     * @param channel The channel number.
+     * @param callback The callback function to register.
+     */
+    virtual void registerCallback(uint32_t channel, CallbackFunction callback) = 0;
+    
+    /**
+     * @brief Processes data received from the M4 core.
+     *
+     * @param channel The channel number.
+     * @param data The data received from the M4 core.
+     */
+    virtual void processM4Data(uint32_t channel, const std::map<std::string, float>& data) = 0;
 };
 
 #endif

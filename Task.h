@@ -134,4 +134,60 @@ private:
     std::queue<ChannelCtrlService*> ctrlServices;
 };
 
+/**
+ * @brief Constant Current Task
+ *
+ * Sets a channel to constant current mode
+ */
+class CCTask : public ControlTask {
+public:
+    /**
+     * @brief Constructor for the CCTask class.
+     *
+     * @param channel The channel number.
+     * @param current The target current value.
+     * @param ctrlService Pointer to the channel control service.
+     */
+    CCTask(uint32_t channel, float current, ChannelCtrlService* ctrlService)
+        : ControlTask(TaskPriority::NORMAL), channel(channel), current(current), ctrlService(ctrlService) {}
+    
+    /**
+     * @brief Executes the constant current task.
+     */
+    void execute() override;
+
+private:
+    uint32_t channel;
+    float current;
+    ChannelCtrlService* ctrlService;
+};
+
+/**
+ * @brief Constant Voltage Task
+ *
+ * Sets a channel to constant voltage mode
+ */
+class CVTask : public ControlTask {
+public:
+    /**
+     * @brief Constructor for the CVTask class.
+     *
+     * @param channel The channel number.
+     * @param targetVoltage The target voltage value.
+     * @param ctrlService Pointer to the channel control service.
+     */
+    CVTask(uint32_t channel, float targetVoltage, ChannelCtrlService* ctrlService)
+        : ControlTask(TaskPriority::NORMAL), channel(channel), targetVoltage(targetVoltage), ctrlService(ctrlService) {}
+    
+    /**
+     * @brief Executes the constant voltage task.
+     */
+    void execute() override;
+
+private:
+    uint32_t channel;
+    float targetVoltage;
+    ChannelCtrlService* ctrlService;
+};
+
 #endif

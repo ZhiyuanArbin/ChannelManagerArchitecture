@@ -61,6 +61,7 @@ public:
      */
     void runRest(uint32_t channel);
 
+private:
     /**
      * @brief Adds a control task to the control task queue.
      *
@@ -75,24 +76,6 @@ public:
      */
     void addDataTask(DataTask* task);
 
-    /**
-     * @brief Registers a callback function for a specific channel.
-     *
-     * @param channel The channel number.
-     * @param callback The callback function to register.
-     */
-    using CallbackFunction = std::function<void(uint32_t channel, const std::map<std::string, float>& data)>;
-    void registerCallback(uint32_t channel, CallbackFunction callback);
-
-    /**
-     * @brief Processes data received from the M4 core.
-     *
-     * @param channel The channel number.
-     * @param data The data received from the M4 core.
-     */
-    void processM4Data(uint32_t channel, const std::map<std::string, float>& data); // Called when data is received from M4
-
-private:
     // Task Queues
     std::priority_queue<ControlTask*, std::vector<ControlTask*>, TaskComparator> controlTaskQueue;
     std::priority_queue<DataTask*, std::vector<DataTask*>, TaskComparator> dataTaskQueue;
@@ -109,14 +92,11 @@ private:
     std::condition_variable controlQueueCV;
     std::condition_variable dataQueueCV;
 
-    // Callback Map
-    std::map<uint32_t, CallbackFunction> callbackMap;
-
     // Thread Functions
     void controlThreadFunction();
     void dataThreadFunction();
 
-    // Low-Level Services (Example)
+    // Low-Level Services
     ChannelCtrlService* channelCtrlService;
     ChannelDataService* channelDataService;
 };
