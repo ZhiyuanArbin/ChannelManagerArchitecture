@@ -15,60 +15,9 @@ BatteryTestingService::BatteryTestingService() :
     dataThread2(&BatteryTestingService::dataThreadFunction, this) {
     
     // Initialize channel control service
-    class DummyChannelCtrlService : public ChannelCtrlService {
-    public:
-        void doConstantCurrent(uint32_t channel, float current) override {
-            std::cout << "CC on channel " << channel << ", current: " << current << std::endl;
-        }
-        void doConstantVoltage(uint32_t channel, float voltage) override {
-            std::cout << "CV on channel " << channel << ", voltage: " << voltage << std::endl;
-        }
-        void doRest(uint32_t channel) override {
-            std::cout << "Rest on channel " << channel << std::endl;
-        }
-        void doOFF(uint32_t channel) override {
-            std::cout << "OFF on channel " << channel << std::endl;
-        }
-    };
     channelCtrlService = new DummyChannelCtrlService();
 
     // Initialize channel data service
-    class DummyChannelDataService : public ChannelDataService {
-    private:
-        std::map<uint32_t, CallbackFunction> callbackMap;
-        
-    public:
-        void subscribeChannel(uint32_t channel) override {
-            std::cout << "Subscribing to channel " << channel << std::endl;
-        }
-        
-        float getVoltage(uint32_t channel) override {
-            std::cout << "Getting voltage for channel " << channel << std::endl;
-            return 0.0f; // Dummy value
-        }
-        
-        float getCurrent(uint32_t channel) override {
-            std::cout << "Getting current for channel " << channel << std::endl;
-            return 0.0f; // Dummy value
-        }
-        
-        void getM4Data() override {
-            std::cout << "Getting M4 data" << std::endl;
-        }
-        
-        void registerCallback(uint32_t channel, CallbackFunction callback) override {
-            std::cout << "Registering callback for channel " << channel << std::endl;
-            callbackMap[channel] = callback;
-        }
-        
-        void processM4Data(uint32_t channel, const std::map<std::string, float>& data) override {
-            std::cout << "Processing M4 data for channel " << channel << std::endl;
-            // Simulate data processing and callback trigger
-            if (callbackMap.count(channel) > 0) {
-                callbackMap[channel](channel, data);
-            }
-        }
-    };
     channelDataService = new DummyChannelDataService();
 }
 
