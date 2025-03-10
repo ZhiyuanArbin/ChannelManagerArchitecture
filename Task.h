@@ -227,30 +227,11 @@ private:
     ChannelDataService* dataService;
 };
 
-/**
- * @brief Data Processing Task base class
- *
- * Base class for data processing tasks that run in the data plane.
- */
-class DataProcessingTask : public DataTask {
-public:
-    /**
-     * @brief Constructor for the DataProcessingTask class.
-     *
-     * @param priority The priority of the task.
-     */
-    DataProcessingTask(TaskPriority priority) : DataTask(priority) {}
-    
-    /**
-     * @brief Virtual destructor for the DataProcessingTask class.
-     */
-    virtual ~DataProcessingTask() {}
-};
 
 /**
  * @brief Fitting data task for processing raw data
  */
-class FittingDataTask : public DataProcessingTask {
+class FittingDataTask : public DataTask {
 public:
     /**
      * @brief Constructor for the FittingDataTask class.
@@ -258,9 +239,9 @@ public:
      * @param channel The channel number.
      * @param data The raw data to process.
      */
-    FittingDataTask(uint32_t channel, const std::map<std::string, float>& data)
-        : DataProcessingTask(TaskPriority::NORMAL), channel(channel), rawData(data) {}
-    
+    FittingDataTask(uint32_t channel, const std::map<std::string, float> &data)
+        : DataTask(TaskPriority::NORMAL), channel(channel), rawData(data) {}
+
     /**
      * @brief Executes the fitting algorithm on the raw data.
      */
@@ -274,7 +255,7 @@ private:
 /**
  * @brief Filtering data task for cleaning noisy data
  */
-class FilteringDataTask : public DataProcessingTask {
+class FilteringDataTask : public DataTask {
 public:
     /**
      * @brief Constructor for the FilteringDataTask class.
@@ -283,7 +264,7 @@ public:
      * @param data The data to filter.
      */
     FilteringDataTask(uint32_t channel, const std::map<std::string, float>& data)
-        : DataProcessingTask(TaskPriority::NORMAL), channel(channel), rawData(data) {}
+        : DataTask(TaskPriority::NORMAL), channel(channel), rawData(data) {}
     
     /**
      * @brief Executes the filtering algorithm on the raw data.
@@ -295,33 +276,5 @@ private:
     std::map<std::string, float> rawData;
 };
 
-/**
- * @brief Callback Notifier Task to notify the control plane about new data
- */
-class NotifyCallbackTask : public DataTask {
-public:
-    /**
-     * @brief Constructor for the NotifyCallbackTask class.
-     *
-     * @param channel The channel number that has new data.
-     */
-    NotifyCallbackTask(uint32_t channel)
-        : DataTask(TaskPriority::HIGH), channel(channel) {}
-    
-    /**
-     * @brief Gets the channel associated with this notification.
-     */
-    uint32_t getChannel() const { return channel; }
-    
-    /**
-     * @brief Executes the notification.
-     *
-     * This would normally add a CallbackControlTask to the control task queue.
-     */
-    void execute() override;
-
-private:
-    uint32_t channel;
-};
 
 #endif

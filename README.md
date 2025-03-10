@@ -60,7 +60,7 @@ The application utilizes a callback mechanism to handle asynchronous communicati
 
 *   **Central Data Table:** The ChannelDataService maintains a comprehensive data table that stores up-to-date information for all subscribed channels, including voltage, current, dv/dt, and other metrics. This table is continuously updated with incoming data from the M4 core.
 
-*   **Callback Mechanism in Control Plane:** Callback functions are registered with the BatteryTestingService (not the ChannelDataService) for each channel. The control plane maintains a callbackMap that stores these functions, and they are executed as CallbackControlTasks when new data is available. This separation ensures that:
+*   **Callback Mechanism in Control Plane:** Callback functions are registered with the BatteryTestingService (not the ChannelDataService) for each channel. The control plane maintains a callbackMap that stores multiple callback functions per channel, and they are executed as CallbackControlTasks when new data is available. This separation ensures that:
     * Data processing occurs in the data plane
     * Callback execution occurs in the control plane
     * There's a clear separation of responsibilities between planes
@@ -71,8 +71,8 @@ The application utilizes a callback mechanism to handle asynchronous communicati
     1. The data plane receives data from the M4 core through its `receiveM4Data` method
     2. The data plane updates the channel data table with the new values
     3. For subscribed channels, the data plane notifies the control plane about new data
-    4. The control plane creates a CallbackControlTask for the channel
-    5. The CallbackControlTask is executed in the control thread, reading the latest data and running the callback
+    4. The control plane creates a CallbackControlTask for each callback registered for the channel
+    5. Each CallbackControlTask is executed in the control thread, reading the latest data and running its callback
 
 *   **CallbackControlTask:** This specialized task reads the current data from the ChannelDataService and executes the registered callback in the control plane context. This ensures that callbacks have access to the most up-to-date data and are executed in the appropriate thread context.
 
@@ -81,7 +81,7 @@ The application utilizes a callback mechanism to handle asynchronous communicati
 The CCCV control type demonstrates the new callback architecture with separation between data and control planes:
 
 1. The `runCCCV` function is called with the desired channel, current, and target voltage
-2. The channel is subscribed in the data plane to receive updates
+2. The channel is subscribed in the data plane
 3. A control task (CCTask) is added to the control task queue to set the channel to constant current mode
 4. A callback function is registered with the BatteryTestingService (in the control plane) to monitor voltage
 5. When new data is available:
@@ -90,7 +90,7 @@ The CCCV control type demonstrates the new callback architecture with separation
    - The control plane creates a CallbackControlTask that:
      - Reads the latest data from the data plane
      - Checks if the target voltage has been reached
-6. When the target voltage is reached, the callback adds a CV task to the control task queue to switch to constant voltage mode
+6. When the target voltage is reached, the callback adds a CV task to the control task queue to switch to constant voltage mode.  Then the callback is unregistered.
 
 ### 6. Generic Control Task
 

@@ -140,23 +140,13 @@ public:
     // ... other get data functions
     
     /**
-     * @brief Receives and processes data from the M4 core.
-     * Updates the channel data table if the channel is subscribed.
-     * Does not handle callbacks (this is now the control plane's responsibility).
+     * @brief Receives data from the M4 core.
      *
      * @param channel The channel number.
      * @param data The data received from the M4 core.
-     * @return True if channel is subscribed and data was updated, false otherwise.
      */
-    virtual bool receiveM4Data(uint32_t channel, const std::map<std::string, float>& data) = 0;
+    virtual void receiveM4Data(uint32_t channel, const std::map<std::string, float>& data) = 0;
     
-    /**
-     * @brief Notifies the control plane that new data is available for a channel.
-     * This is a hook for the data plane to inform the control plane about new data.
-     *
-     * @param channel The channel with new data available.
-     */
-    virtual void notifyNewData(uint32_t channel) = 0;
 };
 
 /**
@@ -220,9 +210,6 @@ private:
     
     // Map to track subscribed channels
     std::map<uint32_t, bool> subscribedChannels;
-    
-    // Function pointer for the notify callback
-    std::function<void(uint32_t)> notifyCallback;
     
 public:
     /**
@@ -313,63 +300,21 @@ public:
     }
     
     /**
-     * @brief Receives and processes data from the M4 core.
-     * Updates the channel data table if the channel is subscribed.
+     * @brief Receives data from the M4 core.
+     * Updates the channel data table.
      *
      * @param channel The channel number.
      * @param data The data received from the M4 core.
-     * @return True if data was updated, false otherwise.
      */
-    bool receiveM4Data(uint32_t channel, const std::map<std::string, float>& data) override {
+    void receiveM4Data(uint32_t channel, const std::map<std::string, float>& data) override {
         std::cout << "Receiving M4 data for channel " << channel << std::endl;
-        
-        // Always update the channel data table for any channel with data
-        bool updated = false;
         
         // Update the channel data table with new values
         for (const auto& pair : data) {
             channelDataTable[channel][pair.first] = pair.second;
-            updated = true;
         }
-        
-        // Process additional metrics if needed
-        // For example, calculate dv/dt based on previous and current voltage readings
-        if (data.count("voltage") > 0 && data.count("timestamp") > 0) {
-            // In a real implementation, you would use previous voltage and timestamp values
-            channelDataTable[channel]["dvdt"] = 0.001f; // Dummy calculation
-            updated = true;
-        }
-        
-        // If the channel is subscribed and data was updated, notify the control plane
-        if (updated && isChannelSubscribed(channel)) {
-            notifyNewData(channel);
-        }
-        
-        return updated;
     }
     
-    /**
-     * @brief Notifies the control plane that new data is available for a channel.
-     * This method would be hooked up to the BatteryTestingService to add
-     * a CallbackControlTask to the control task queue.
-     *
-     * @param channel The channel with new data available.
-     */
-    void notifyNewData(uint32_t channel) override {
-        std::cout << "Notifying new data for channel " << channel << std::endl;
-        // In a real implementation, this would communicate with the control plane
-        // For example, by creating a NotifyCallbackTask and adding it to a queue
-    }
-    
-    /**
-     * @brief Sets a callback function to be called when notifyNewData is executed.
-     * This allows the BatteryTestingService to be notified when new data is available.
-     *
-     * @param callback The function to call when new data is available for a channel.
-     */
-    void setNotifyCallback(std::function<void(uint32_t)> callback) {
-        notifyCallback = callback;
-    }
 };
 
 #endif

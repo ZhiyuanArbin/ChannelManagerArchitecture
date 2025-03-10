@@ -62,8 +62,9 @@ void BatteryTestingService::runCCCV(uint32_t channel, float current, float targe
             // Create and add a CV task
             addControlTask(new CVTask(channel, targetVoltage, channelCtrlService));
             
-            // Optionally, unregister the callback once we've switched to CV
-            // unregisterCallback(channel);
+            // Optionally, unregister all callbacks once we've switched to CV
+            unregisterCallback(channel, -1);
+            channelDataService->unsubscribeChannel(channel);
         }
     });
 }
@@ -119,23 +120,32 @@ void BatteryTestingService::addDataTask(DataTask* task) {
  */
 void BatteryTestingService::registerCallback(uint32_t channel, std::function<void(uint32_t, const std::map<std::string, float>&)> callback) {
     std::cout << "Registering callback for channel " << channel << std::endl;
-    callbackMap[channel] = callback;
+    
+    // Create vector for the channel if it doesn't exist
+    if (callbackMap.find(channel) == callbackMap.end()) {
+        callbackMap[channel] = std::vector<std::function<void(uint32_t, const std::map<std::string, float>&)>>();
+    }
+    
+    // Add the callback to the vector
+    callbackMap[channel].push_back(callback);
 }
 
 /**
  * @brief Handles notifications of new data from the data plane.
- * Creates and adds a CallbackControlTask to execute the registered callback.
+ * Creates and adds a CallbackControlTask to execute the registered callbacks.
  *
  * @param channel The channel number with new data.
  */
-void BatteryTestingService::handleNewDataNotification(uint32_t channel) {
+void BatteryTestingService::handleCallbacks(uint32_t channel) {
     std::cout << "Handling new data notification for channel " << channel << std::endl;
     
-    // Check if there's a callback registered for this channel
-    if (callbackMap.find(channel) != callbackMap.end()) {
-        // Create a CallbackControlTask and add it to the control task queue
-        CallbackControlTask* task = new CallbackControlTask(channel, callbackMap[channel], channelDataService);
-        addControlTask(task);
+    // Check if there are callbacks registered for this channel
+    if (callbackMap.find(channel) != callbackMap.end() && !callbackMap[channel].empty()) {
+        // Create a CallbackControlTask for each callback and add it to the control task queue
+        for (const auto& callback : callbackMap[channel]) {
+            CallbackControlTask* task = new CallbackControlTask(channel, callback, channelDataService);
+            addControlTask(task);
+        }
     }
 }
 
@@ -143,10 +153,28 @@ void BatteryTestingService::handleNewDataNotification(uint32_t channel) {
  * @brief Unregisters a callback function for a specific channel.
  *
  * @param channel The channel number.
+ * @param callbackIndex Optional index of the specific callback to unregister.
+ *                     If negative, all callbacks for the channel will be unregistered.
  */
-void BatteryTestingService::unregisterCallback(uint32_t channel) {
-    std::cout << "Unregistering callback for channel " << channel << std::endl;
-    callbackMap.erase(channel);
+void BatteryTestingService::unregisterCallback(uint32_t channel, int callbackIndex) {
+    std::cout << "Unregistering callback(s) for channel " << channel << std::endl;
+    
+    // Check if there are callbacks registered for this channel
+    auto it = callbackMap.find(channel);
+    if (it != callbackMap.end()) {
+        if (callbackIndex < 0) {
+            // Remove all callbacks for this channel
+            callbackMap.erase(channel);
+        } else if (callbackIndex < static_cast<int>(it->second.size())) {
+            // Remove the specific callback at the given index
+            it->second.erase(it->second.begin() + callbackIndex);
+            
+            // If no callbacks remain, remove the channel entry
+            if (it->second.empty()) {
+                callbackMap.erase(channel);
+            }
+        }
+    }
 }
 
 /**
@@ -197,16 +225,6 @@ void BatteryTestingService::dataThreadFunction() {
 void BatteryTestingService::m4DataThreadFunction() {
     // Example data for demonstration purposes
     std::map<std::string, float> sampleData;
-    
-    // Connect the data plane notification to the control plane
-    // This is pseudo-code - in a real implementation, there would be a proper way
-    // to set up the notification callback
-    DummyChannelDataService* dummyDataService = static_cast<DummyChannelDataService*>(channelDataService);
-    dummyDataService->setNotifyCallback([this](uint32_t channel) {
-        // When the data service notifies about new data, handle it in the control plane
-        this->handleNewDataNotification(channel);
-    });
-    
     while (true) {
         // In a real implementation, we would read from the M4 core
         // Something like:
@@ -214,27 +232,18 @@ void BatteryTestingService::m4DataThreadFunction() {
         
         // For simulation purposes, iterate over all channels
         for (uint32_t channel = 0; channel < MAX_CHAN_NUM; channel++) {
-            // Simulate getting data
-            sampleData["voltage"] = 3.7f + (channel * 0.1f);
-            sampleData["current"] = 1.0f - (channel * 0.05f);
-            sampleData["temperature"] = 25.0f + channel;
-            sampleData["timestamp"] = static_cast<float>(time(nullptr));
-            
-            // Process data in the data plane for ALL channels
             // Create data processing tasks (filtering, fitting, etc.)
+            channelDataService->receiveM4Data(channel, sampleData);
             addDataTask(new FilteringDataTask(channel, sampleData));
             addDataTask(new FittingDataTask(channel, sampleData));
-            
-            // Update the channel data table with processed data for ALL channels
-            bool updated = channelDataService->receiveM4Data(channel, sampleData);
-            
-            // Note: The notification to the control plane is only triggered
-            // for subscribed channels within receiveM4Data method
-            // The control plane then executes the registered callbacks for those channels only
+            if (channelDataService->isChannelSubscribed(channel)) {
+                // Execute callbacks for subscribed channels
+                handleCallbacks(channel);
+            }
         }
         
         // Sleep to avoid excessive CPU usage
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
@@ -259,9 +268,8 @@ void GenericControlTask::execute() {
     while (!ctrlServices.empty()) {
         ChannelCtrlService* service = ctrlServices.front();
         ctrlServices.pop();
-        // Assuming all services are the same, but you can add logic to handle different service types
-        // service->execute(); // Execute the service (assuming a common execute method)
-        delete service; // Clean up the service after execution
+        // Clean up the service after execution
+        delete service;
     }
 }
 
@@ -288,50 +296,4 @@ void CallbackControlTask::execute() {
     if (callback) {
         callback(channel, channelData);
     }
-}
-
-/**
- * @brief Executes the fitting data task.
- *
- * In a real implementation, this would apply a mathematical fitting algorithm
- * to the raw data to extract patterns or trends.
- */
-void FittingDataTask::execute() {
-    std::cout << "Executing fitting algorithm on data for channel " << channel << std::endl;
-    
-    // In a real implementation, this would:
-    // 1. Apply mathematical fitting to the raw data
-    // 2. Store the results in the channel data table
-    // 3. Calculate derived metrics
-    
-    // For demonstration, we just log the action
-}
-
-/**
- * @brief Executes the filtering data task.
- *
- * In a real implementation, this would apply a filtering algorithm
- * to clean the raw data by removing noise or outliers.
- */
-void FilteringDataTask::execute() {
-    std::cout << "Executing filtering algorithm on data for channel " << channel << std::endl;
-    
-    // In a real implementation, this would:
-    // 1. Apply filters to clean the raw data
-    // 2. Store the filtered data in the channel data table
-    
-    // For demonstration, we just log the action
-}
-
-/**
- * @brief Executes the notification task.
- *
- * This is a data plane task that notifies the control plane about
- * new data availability for a channel.
- */
-void NotifyCallbackTask::execute() {
-    std::cout << "Notifying control plane about new data for channel " << channel << std::endl;
-    
-    // In a real implementation, this would communicate with the BatteryTestingService
-    // to trigger callback handling in the control plane
 }

@@ -90,14 +90,16 @@ private:
      *
      * @param channel The channel number with new data.
      */
-    void handleNewDataNotification(uint32_t channel);
-    
+    void handleCallbacks(uint32_t channel);
     /**
      * @brief Unregisters a callback function for a specific channel.
      *
      * @param channel The channel number.
+     * @param callbackIndex Optional index of the specific callback to unregister.
+     *                     If not provided, all callbacks for the channel will be unregistered.
      */
-    void unregisterCallback(uint32_t channel);
+    void unregisterCallback(uint32_t channel, int callbackIndex = -1);
+    // void unregisterCallback(uint32_t channel);
 
     // Task Queues
     std::priority_queue<ControlTask*, std::vector<ControlTask*>, TaskComparator> controlTaskQueue;
@@ -124,8 +126,8 @@ private:
     ChannelCtrlService* channelCtrlService;
     ChannelDataService* channelDataService;
     
-    // Callback map to store callback functions for each channel
-    std::map<uint32_t, std::function<void(uint32_t, const std::map<std::string, float>&)>> callbackMap;
+    // Callback map to store multiple callback functions for each channel
+    std::map<uint32_t, std::vector<std::function<void(uint32_t, const std::map<std::string, float>&)>>> callbackMap;
 };
 
 #endif
