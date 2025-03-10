@@ -6,10 +6,6 @@
 /**
  * @brief This is the main entry point for the Battery Testing application.
  *
- * This application simulates a battery testing service that controls and monitors
- * battery testing hardware. It demonstrates the use of the BatteryTestingService
- * class, which manages control and data tasks, handles asynchronous communication
- * with the M4 core, and provides a callback mechanism for reacting to data changes.
  */
 int main() {
     BatteryTestingService service;

@@ -7,6 +7,7 @@
 #include <map>
 #include <string>
 
+#define MAX_CHAN_NUM 32
 // Forward declaration
 class Task;
 
@@ -58,6 +59,8 @@ public:
     virtual void doOFF(uint32_t channel) = 0;
 
     // ... other control functions
+
+    // virtual const 
 };
 
 /**
@@ -208,16 +211,6 @@ public:
     void subscribeChannel(uint32_t channel) override {
         std::cout << "Subscribing to channel " << channel << std::endl;
         subscribedChannels[channel] = true;
-        
-        // Initialize channel data table entry if it doesn't exist
-        if (channelDataTable.find(channel) == channelDataTable.end()) {
-            channelDataTable[channel] = {
-                {"voltage", 0.0f},
-                {"current", 0.0f},
-                {"dvdt", 0.0f}
-                // Other metrics can be added here
-            };
-        }
     }
     
     /**
@@ -284,11 +277,10 @@ public:
         std::cout << "Receiving M4 data for channel " << channel << std::endl;
         
         // Only update data table if the channel is subscribed
-        if (subscribedChannels.count(channel) > 0 && subscribedChannels[channel]) {
-            // Update the channel data table with new values
-            for (const auto& pair : data) {
-                channelDataTable[channel][pair.first] = pair.second;
-            }
+        // Update the channel data table with new values
+        for (const auto& pair : data) {
+            channelDataTable[channel][pair.first] = pair.second;
+        }
             
             // Process additional metrics if needed
             // For example, calculate dv/dt based on previous and current voltage readings
@@ -302,7 +294,6 @@ public:
             if (callbackMap.count(channel) > 0) {
                 callbackMap[channel](channel, channelDataTable[channel]);
             }
-        }
     }
 };
 
