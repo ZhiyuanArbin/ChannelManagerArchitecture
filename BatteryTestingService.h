@@ -75,6 +75,29 @@ private:
      * @param task The data task to add.
      */
     void addDataTask(DataTask* task);
+    
+    /**
+     * @brief Registers a callback function for a specific channel.
+     *
+     * @param channel The channel number.
+     * @param callback The callback function to register.
+     */
+    void registerCallback(uint32_t channel, std::function<void(uint32_t, const std::map<std::string, float>&)> callback);
+    
+    /**
+     * @brief Handles notifications of new data from the data plane.
+     * Creates and adds a CallbackControlTask to execute the registered callback.
+     *
+     * @param channel The channel number with new data.
+     */
+    void handleNewDataNotification(uint32_t channel);
+    
+    /**
+     * @brief Unregisters a callback function for a specific channel.
+     *
+     * @param channel The channel number.
+     */
+    void unregisterCallback(uint32_t channel);
 
     // Task Queues
     std::priority_queue<ControlTask*, std::vector<ControlTask*>, TaskComparator> controlTaskQueue;
@@ -100,6 +123,9 @@ private:
     // Low-Level Services
     ChannelCtrlService* channelCtrlService;
     ChannelDataService* channelDataService;
+    
+    // Callback map to store callback functions for each channel
+    std::map<uint32_t, std::function<void(uint32_t, const std::map<std::string, float>&)>> callbackMap;
 };
 
 #endif

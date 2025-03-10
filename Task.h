@@ -4,8 +4,11 @@
 #include <queue>
 #include <functional>
 #include <vector>
+#include <map>
+#include <string>
 
 class ChannelCtrlService;
+class ChannelDataService;
 
 // Forward declaration
 class Task;
@@ -188,6 +191,137 @@ private:
     uint32_t channel;
     float targetVoltage;
     ChannelCtrlService* ctrlService;
+};
+
+/**
+ * @brief Callback Control Task to handle callback functions for subscribed channels.
+ *
+ * This class handles callback functions in the control plane instead of the data plane.
+ * It reads data from the channel data table and executes callback logic based on the data.
+ */
+class CallbackControlTask : public ControlTask {
+public:
+    // Define callback function type
+    using CallbackFunction = std::function<void(uint32_t channel, const std::map<std::string, float>& data)>;
+    
+    /**
+     * @brief Constructor for the CallbackControlTask class.
+     *
+     * @param channel The channel number.
+     * @param callback The callback function to execute.
+     * @param dataService Pointer to the channel data service to read data from.
+     */
+    CallbackControlTask(uint32_t channel, CallbackFunction callback, ChannelDataService* dataService)
+        : ControlTask(TaskPriority::HIGH), channel(channel), callback(callback), dataService(dataService) {}
+    
+    /**
+     * @brief Executes the callback task.
+     *
+     * Reads current data for the channel from the data table and executes the callback.
+     */
+    void execute() override;
+
+private:
+    uint32_t channel;
+    CallbackFunction callback;
+    ChannelDataService* dataService;
+};
+
+/**
+ * @brief Data Processing Task base class
+ *
+ * Base class for data processing tasks that run in the data plane.
+ */
+class DataProcessingTask : public DataTask {
+public:
+    /**
+     * @brief Constructor for the DataProcessingTask class.
+     *
+     * @param priority The priority of the task.
+     */
+    DataProcessingTask(TaskPriority priority) : DataTask(priority) {}
+    
+    /**
+     * @brief Virtual destructor for the DataProcessingTask class.
+     */
+    virtual ~DataProcessingTask() {}
+};
+
+/**
+ * @brief Fitting data task for processing raw data
+ */
+class FittingDataTask : public DataProcessingTask {
+public:
+    /**
+     * @brief Constructor for the FittingDataTask class.
+     *
+     * @param channel The channel number.
+     * @param data The raw data to process.
+     */
+    FittingDataTask(uint32_t channel, const std::map<std::string, float>& data)
+        : DataProcessingTask(TaskPriority::NORMAL), channel(channel), rawData(data) {}
+    
+    /**
+     * @brief Executes the fitting algorithm on the raw data.
+     */
+    void execute() override;
+
+private:
+    uint32_t channel;
+    std::map<std::string, float> rawData;
+};
+
+/**
+ * @brief Filtering data task for cleaning noisy data
+ */
+class FilteringDataTask : public DataProcessingTask {
+public:
+    /**
+     * @brief Constructor for the FilteringDataTask class.
+     *
+     * @param channel The channel number.
+     * @param data The data to filter.
+     */
+    FilteringDataTask(uint32_t channel, const std::map<std::string, float>& data)
+        : DataProcessingTask(TaskPriority::NORMAL), channel(channel), rawData(data) {}
+    
+    /**
+     * @brief Executes the filtering algorithm on the raw data.
+     */
+    void execute() override;
+
+private:
+    uint32_t channel;
+    std::map<std::string, float> rawData;
+};
+
+/**
+ * @brief Callback Notifier Task to notify the control plane about new data
+ */
+class NotifyCallbackTask : public DataTask {
+public:
+    /**
+     * @brief Constructor for the NotifyCallbackTask class.
+     *
+     * @param channel The channel number that has new data.
+     */
+    NotifyCallbackTask(uint32_t channel)
+        : DataTask(TaskPriority::HIGH), channel(channel) {}
+    
+    /**
+     * @brief Gets the channel associated with this notification.
+     */
+    uint32_t getChannel() const { return channel; }
+    
+    /**
+     * @brief Executes the notification.
+     *
+     * This would normally add a CallbackControlTask to the control task queue.
+     */
+    void execute() override;
+
+private:
+    uint32_t channel;
 };
 
 #endif
