@@ -19,6 +19,11 @@ class Task;
 class ControlTask;
 class DataTask;
 
+typedef struct
+{
+    std::string var_type;
+    float target_value;
+} StepLimit; // Define the StepLimit struct
 /**
  * @brief The BatteryTestingService class provides an abstraction layer for controlling battery testing hardware.
  *
@@ -44,7 +49,7 @@ public:
      * @param current The target current value.
      * @param targetVoltage The target voltage value.
      */
-    void runCCCV(uint32_t channel, float current, float targetVoltage);
+    void runCCCV(uint32_t channel, float current, float targetVoltage, const std::vector<StepLimit> &steplimit);
 
     /**
      * @brief Runs a Direct Current Internal Measurement (DCIM) test on a channel.
@@ -129,5 +134,6 @@ private:
     // Callback map to store multiple callback functions for each channel
     std::map<uint32_t, std::vector<std::function<void(uint32_t, const std::map<std::string, float>&)>>> callbackMap;
 };
+
 
 #endif

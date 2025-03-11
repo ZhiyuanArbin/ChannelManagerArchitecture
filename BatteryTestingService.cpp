@@ -38,14 +38,18 @@ BatteryTestingService::~BatteryTestingService() {
     delete channelDataService;
 }
 
+
+
 /**
  * @brief Runs a Constant Current Constant Voltage (CCCV) test on a channel.
  *
  * @param channel The channel number.
  * @param current The target current value.
  * @param targetVoltage The target voltage value.
+ * @param steplimit The step limit for the test.
  */
-void BatteryTestingService::runCCCV(uint32_t channel, float current, float targetVoltage) {
+void BatteryTestingService::runCCCV(uint32_t channel, float current, float targetVoltage,
+    const std::vector<StepLimit>& steplimit) {
     std::cout << "Running CCCV on channel " << channel << ", current: " << current << ", target voltage: " << targetVoltage << std::endl;
 
     // 1. Subscribe to the channel data
@@ -62,9 +66,22 @@ void BatteryTestingService::runCCCV(uint32_t channel, float current, float targe
             // Create and add a CV task
             addControlTask(new CVTask(channel, targetVoltage, channelCtrlService));
             
-            // Optionally, unregister all callbacks once we've switched to CV
+            // Unregister the callback once we've switched to CV
+            unregisterCallback(channel, 0);
+
+            // register CV callback check
+            registerCallback(channel, [this, channel, checkCV_data](uint32_t ch, const std::map<std::string, float>& data) {
+                this->checkCV(channel, data, checkCV_data); 
+            } );
+        }
+    });
+
+    registerCallback(channel, [this, channel, steplimit](uint32_t ch, const std::map<std::string, float>& data) {
+        if (isLimitReached(data, steplimit)) {
+            std::cout << "Step limit reached on channel " << channel << ", ending test" << std::endl;
             unregisterCallback(channel, -1);
             channelDataService->unsubscribeChannel(channel);
+            terminateTest(channel);  
         }
     });
 }
@@ -224,18 +241,20 @@ void BatteryTestingService::dataThreadFunction() {
  */
 void BatteryTestingService::m4DataThreadFunction() {
     // Example data for demonstration purposes
-    std::map<std::string, float> sampleData;
+    std::map<std::string, float> sampleData[MAX_CHAN_NUM];
     while (true) {
         // In a real implementation, we would read from the M4 core
         // Something like:
-        // ReadFromM4Core(&channel, &rawData);
+
+        ReadFromM4("/dev/ttyRPMSG0", &sampleData);
         
+
         // For simulation purposes, iterate over all channels
         for (uint32_t channel = 0; channel < MAX_CHAN_NUM; channel++) {
             // Create data processing tasks (filtering, fitting, etc.)
-            channelDataService->receiveM4Data(channel, sampleData);
-            addDataTask(new FilteringDataTask(channel, sampleData));
-            addDataTask(new FittingDataTask(channel, sampleData));
+            channelDataService->receiveM4Data(channel, sampleData[channel]);
+            addDataTask(new FilteringDataTask(channel, sampleData[channel]));
+            addDataTask(new FittingDataTask(channel, sampleData[channel]));
             if (channelDataService->isChannelSubscribed(channel)) {
                 // Execute callbacks for subscribed channels
                 handleCallbacks(channel);
