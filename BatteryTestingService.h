@@ -8,6 +8,8 @@
 #include <condition_variable>
 #include <functional>
 #include <map>
+#include <vector>
+#include <atomic>
 
 #include "Task.h"
 #include "ChannelService.h"
@@ -16,26 +18,27 @@
 class ChannelCtrlService;
 class ChannelDataService;
 class Task;
-class ControlTask;
-class DataTask;
 
 typedef struct
 {
     std::string var_type;
     float target_value;
 } StepLimit; // Define the StepLimit struct
+
 /**
  * @brief The BatteryTestingService class provides an abstraction layer for controlling battery testing hardware.
  *
- * This class manages control and data tasks, handles asynchronous communication with the M4 core,
+ * This class manages tasks, handles asynchronous communication with the M4 core,
  * and provides a callback mechanism for reacting to data changes.
  */
 class BatteryTestingService {
 public:
     /**
      * @brief Constructor for the BatteryTestingService class.
+     *
+     * @param numWorkerThreads The initial number of worker threads to create.
      */
-    BatteryTestingService();
+    BatteryTestingService(size_t numWorkerThreads = 3);
 
     /**
      * @brief Destructor for the BatteryTestingService class.
@@ -48,16 +51,17 @@ public:
      * @param channel The channel number.
      * @param current The target current value.
      * @param targetVoltage The target voltage value.
+     * @param steplimit The step limit for the test.
      */
     void runCCCV(uint32_t channel, float current, float targetVoltage, const std::vector<StepLimit> &steplimit);
 
     /**
-     * @brief Runs a Direct Current Internal Measurement (DCIM) test on a channel.
+     * @brief Runs a Current Ramp test on a channel.
      *
      * @param channel The channel number.
      * @param current The target current value.
      */
-    void runDCIM(uint32_t channel, float current);
+    void runCurrentRamp(uint32_t channel, float current);
 
     /**
      * @brief Sets the channel to a rest state (open circuit).
@@ -66,20 +70,27 @@ public:
      */
     void runRest(uint32_t channel);
 
+    /**
+     * @brief Adds or removes worker threads dynamically.
+     *
+     * @param numThreads The new total number of worker threads.
+     */
+    void setWorkerThreadCount(size_t numThreads);
+    
+    /**
+     * @brief Gets the current number of worker threads.
+     *
+     * @return The number of worker threads.
+     */
+    size_t getWorkerThreadCount() const;
+
 private:
     /**
-     * @brief Adds a control task to the control task queue.
+     * @brief Adds a task to the task queue.
      *
-     * @param task The control task to add.
+     * @param task The task to add.
      */
-    void addControlTask(ControlTask* task);
-
-    /**
-     * @brief Adds a data task to the data task queue.
-     *
-     * @param task The data task to add.
-     */
-    void addDataTask(DataTask* task);
+    void addTask(Task* task);
     
     /**
      * @brief Registers a callback function for a specific channel.
@@ -96,6 +107,7 @@ private:
      * @param channel The channel number with new data.
      */
     void handleCallbacks(uint32_t channel);
+    
     /**
      * @brief Unregisters a callback function for a specific channel.
      *
@@ -104,28 +116,24 @@ private:
      *                     If not provided, all callbacks for the channel will be unregistered.
      */
     void unregisterCallback(uint32_t channel, int callbackIndex = -1);
-    // void unregisterCallback(uint32_t channel);
 
-    // Task Queues
-    std::priority_queue<ControlTask*, std::vector<ControlTask*>, TaskComparator> controlTaskQueue;
-    std::priority_queue<DataTask*, std::vector<DataTask*>, TaskComparator> dataTaskQueue;
+    // Single task queue for all tasks
+    std::priority_queue<Task*, std::vector<Task*>, TaskComparator> taskQueue;
 
-    // Threads
-    std::thread controlThread1;
-    std::thread controlThread2;
-    std::thread dataThread;      // For processing data tasks
+    // Worker threads and M4 data thread
+    std::vector<std::thread> workerThreads;
     std::thread m4DataThread;    // Dedicated thread for receiving M4 data
+    
+    // Flag to signal threads to stop
+    std::atomic<bool> stopThreads;
 
-    // Mutexes and Condition Variables
-    std::mutex controlQueueMutex;
-    std::mutex dataQueueMutex;
-    std::condition_variable controlQueueCV;
-    std::condition_variable dataQueueCV;
+    // Mutex and condition variable for task queue
+    std::mutex taskQueueMutex;
+    std::condition_variable taskQueueCV;
 
     // Thread Functions
-    void controlThreadFunction();
-    void dataThreadFunction();
-    void m4DataThreadFunction(); // New function for continuously receiving M4 data
+    void workerThreadFunction();
+    void m4DataThreadFunction();
 
     // Low-Level Services
     ChannelCtrlService* channelCtrlService;
