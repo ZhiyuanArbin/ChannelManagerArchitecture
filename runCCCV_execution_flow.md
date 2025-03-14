@@ -1,61 +1,49 @@
-# runCCCV Execution Flow Diagram
+# runCCCV Execution Flow
 
-```
-©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´
-©¦                         BatteryTestingService                                ©¦
-©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©Ğ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼
-                                    ©¦
-                                    ¨‹
-©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´
-©¦                              runCCCV()                                       ©¦
-©¦                                                                             ©¦
-©¦  1. Subscribe to channel data                                               ©¦
-©¦  2. Create and add CC task to task queue                                    ©¦
-©¦  3. Register voltage monitoring callback                                    ©¦
-©¦  4. Register step limit monitoring callback                                 ©¦
-©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©Ğ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼
-                                    ©¦
-                                    ©¦ Tasks added to queue
-                                    ¨‹
-©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´
-©¦                              Task Queue                                      ©¦
-©¦                                                                             ©¦
-©¦  Priority-based queue with tasks waiting to be processed                    ©¦
-©¸©¤©Ğ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©Ğ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©Ğ©¤©¼
-  ©¦                                 ©¦                                       ©¦
-  ©¦                                 ©¦                                       ©¦
-  ¨‹                                 ¨‹                                       ¨‹
-©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´        ©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´                 ©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´
-©¦ Worker Thread 1 ©¦        ©¦   Worker Thread 2  ©¦                 ©¦   M4 Data Thread   ©¦
-©¦                ©¦        ©¦                    ©¦                 ©¦                    ©¦
-©¦ Processes tasks ©¦        ©¦  Processes tasks   ©¦                 ©¦ Continuously reads ©¦
-©¦ from the queue  ©¦        ©¦  from the queue    ©¦                 ©¦ data from M4 core  ©¦
-©¸©¤©¤©¤©¤©¤©¤©¤©¤©Ğ©¤©¤©¤©¤©¤©¤©¤©¼        ©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©Ğ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼                 ©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©Ğ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼
-         ©¦                          ©¦                                       ©¦
-         ©¦                          ©¦                                       ©¦
-         ©¦                          ©¦                                       ©¦
-         ©¦                          ©¦                                       ©¦
-         ¨‹                          ¨‹                                       ¨‹
-©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´        ©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´                 ©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´
-©¦  Execute Tasks  ©¦        ©¦   Execute Tasks    ©¦                 ©¦ Process M4 Data    ©¦
-©¦                ©¦        ©¦                    ©¦                 ©¦                    ©¦
-©¦ - CC Task      ©¦        ©¦ - Callback Tasks   ©¦                 ©¦ 1. Update channel  ©¦
-©¦ - CV Task      ©¦        ©¦ - Data Tasks       ©¦                 ©¦    data table      ©¦
-©¦ - Other control©¦        ©¦ - Other tasks      ©¦                 ©¦ 2. Create data     ©¦
-©¦   tasks        ©¦        ©¦                    ©¦                 ©¦    processing tasks©¦
-©¸©¤©¤©¤©¤©¤©¤©¤©¤©Ğ©¤©¤©¤©¤©¤©¤©¤©¼        ©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©Ğ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼                 ©¦ 3. Trigger         ©¦
-         ©¦                          ©¦                            ©¦    callbacks       ©¦
-         ©¦                          ©¦                            ©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©Ğ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼
-         ©¦                          ©¦                                       ©¦
-         ©¦                          ©¦                                       ©¦
-         ¨‹                          ¨‹                                       ©¦
-©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´
-©¦                         Channel Control Service                              ©¦
-©¦                                                                             ©¦
-©¦  Hardware control operations:                                               ©¦
-©¦  - doConstantCurrent()                                                      ©¦
-©¦  - doConstantVoltage()                                                      ©¦
-©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼
-
-```
-
+```mermaid
+flowchart TD
+    BatteryService["BatteryTestingService"]
+    runCCCV["runCCCV()"]
+    TaskQueue["Task Queue"]
+    Worker1["Worker Thread 1"]
+    Worker2["Worker Thread 2"]
+    M4Thread["M4 Data Thread"]
+    
+    BatteryService --> runCCCV
+    
+    subgraph runCCCVSteps["runCCCV Steps"]
+        Step1["Subscribe to channel data"]
+        Step2["Create and add CC task to queue"]
+        Step3["Register voltage monitoring callback"]
+        Step4["Register step limit monitoring callback"]
+        
+        Step1 --> Step2 --> Step3 --> Step4
+    end
+    
+    runCCCV --> runCCCVSteps
+    runCCCVSteps --> TaskQueue
+    
+    TaskQueue --> Worker1
+    TaskQueue --> Worker2
+    
+    subgraph WorkerThread1Tasks["Worker Thread 1 Tasks"]
+        CCTask["CC Task"]
+        CVTask["CV Task"]
+        OtherCtrlTasks["Other control tasks"]
+    end
+    
+    subgraph WorkerThread2Tasks["Worker Thread 2 Tasks"]
+        CallbackTasks["Callback Tasks"]
+        DataTasks["Data Tasks"]
+        OtherTasks["Other tasks"]
+    end
+    
+    subgraph M4ThreadTasks["M4 Data Thread Tasks"]
+        UpdateData["Update channel data table"]
+        CreateTasks["Create data processing tasks"]
+        TriggerCBs["Trigger callbacks"]
+    end
+    
+    Worker1 --> WorkerThread1Tasks
+    Worker2 --> WorkerThread2Tasks
+    M4Thread --> M4ThreadTasks
